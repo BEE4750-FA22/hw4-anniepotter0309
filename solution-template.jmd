@@ -1,6 +1,6 @@
 ---
 title: "BEE 4750/5750 Homework 4"
-author: "Your name here (your netID here)"
+author: "Anne Potter (ap674)"
 date: `j import Dates; Dates.Date(Dates.now())`
 weave_options:
     term: false
@@ -19,14 +19,74 @@ Pkg.instantiate()
 # Problem 1
 
 ## Problem 1.1
+```julia
+perc_mass   = [15, 40,  5,  3,  2,  5, 18,   4,   2,   2,   1,  3];
+comb_ash    = [ 8,  7,  5, 10, 15,  2,  2, 100, 100, 100, 100, 70];
+rec_rate    = [ 0, 55, 15, 10,  0, 30, 40,  60,  75,  80,  50,  0];
+component   = ["Food Wastes", "Paper&Cardboard", "Plastics", "Textiles",
+                "Rubber/Leather", "Wood", "Yard Waste", "Glass", "Ferrous",
+                "Aluminum", "Other Metal", "Misc"]
 
+facilities  = ["Landfill", "Recycling", "W2E"];
+capacity    = [200, 350, 150];
+fixed_cost  = [2000, 1500, 2500];
+tipping_fee = [50, 7, 60];
+
+ash = (.08*15) + (.07*40) + (.05*5) + (.10*3) + (.15*2) + 
+      (.05*2) + (.02*18) + 4 + 2 + 2 + 1 + (.70*3)
+ash_check = perc_mass .* (comb_ash / 100)
+rec = (0*15) + (.55*40) + (.15*5) + (.10*3) + (0*2) + (.30*5) + 
+      (.40*18) + (.60*4) + (.75*2) +
+      (.80*2) + (.50*1) + (0*3)
+rec_check = perc_mass .* (rec_rate / 100)
+```
 ## Problem 1.2
+```julia
+using JuMP
+using HiGHS
+
+waste_model = Model(HiGHS.Optimizer);
+F = 1:length(facilities);
+T = 1:length(hours);
+@variable(waste_model,   x[F]    >= 0); 
+@variable(waste_model,   y[G, T] >= 0); 
+@variable(waste_model, nse[T]    >= 0);
+```
+The objective variables are amount of energy sent to each facility, x_f, 
+
 
 ## Problem 1.3
+```julia
+@objective(waste_model, Min, 
+            investment_cost'*x + 365*(sum(op_cost'*y) + sum(nse)*1000))
+```
 
 ## Problem 1.4
+```julia
+# production at each generator cannot exceed generation capacity
+@constraint(waste_model, availability[g in G, t in T], y[g, t] <= cf[g, t] * x[g]);
+# total generation should be equal to the demand
+@constraint(waste_model, load[t in T], sum(y[:,t]) + nse[t] == demand[t]);
+```
 
 ## Problem 1.5
+```julia
+optimize!(waste_model)
+objective_value(waste_model)
+
+value.(x)
+value.(y)
+value.(nse)
+
+using DataFrames
+generation = [sum(value.(y).data[g,:]) for g in G]
+
+results = DataFrame(
+            "Facility"        => facilities,
+            "Installed (MW)"  => value.(x).data,
+            "Generated (GWh)" => generation/1000
+            )
+```
 
 ## Problem 1.6
 
