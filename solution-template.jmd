@@ -84,6 +84,8 @@ rr = [sum(R[:,1]); sum(R[:,2]); sum(R[:,3])];
 @constraint(waste_model, resid1, sum(R[1,:]) == 0);
 @constraint(waste_model, resid2, sum(R[2,:]) == (1-fracs[2])*sum(W[:,2]));
 @constraint(waste_model, resid3, sum(R[3,:]) == fracs[3]*sum(W[:,3]));
+@constraint(waste_model, noresiddiag, sum(R[f, f] for f in F) == 0)
+@constraint(waste_model, noresid, R[3,2] == 0)
 # if a facility is not operating there should be no waste sent to it
 @constraint(waste_model, commit1,  Y[1] == 1);
 @constraint(waste_model, commit2, !Y[2] => {sum(W[:,2]) == 0});
@@ -92,7 +94,7 @@ rr = [sum(R[:,1]); sum(R[:,2]); sum(R[:,3])];
 
 ## Problem 1.5
 ```julia
-
+set_silent(waste_model)
 optimize!(waste_model)
 objective_value(waste_model)
 
@@ -145,6 +147,8 @@ rr = [sum(R[:,1]); sum(R[:,2]); sum(R[:,3])];
 @constraint(waste_model2, resid1, sum(R[1,:]) == 0);
 @constraint(waste_model2, resid2, sum(R[2,:]) == (1-fracs[2])*sum(W[:,2]));
 @constraint(waste_model2, resid3, sum(R[3,:]) == fracs[3]*sum(W[:,3]));
+@constraint(waste_model2, noresiddiag, sum(R[f, f] for f in F) == 0)
+@constraint(waste_model2, noresid, R[3,2] == 0)
 # if a facility is not operating there should be no waste sent to it
 @constraint(waste_model2, commit1,  Y[1] == 1);
 @constraint(waste_model2, commit2, !Y[2] => {sum(W[:,2]) == 0});
