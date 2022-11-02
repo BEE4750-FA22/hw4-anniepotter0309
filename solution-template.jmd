@@ -39,6 +39,13 @@ rec = sum(perc_mass .* (rec_rate / 100));
 secondary_ash = sum((1 .- (rec_rate/100)) .* (comb_ash/100) .* (perc_mass/100));
 fracs = [0, rec/100, ash/100];
 ```
+```math
+\text{Overall Ash Fraction: 16.41%}\\
+\text{Overall Recycling Fraction: 37.75%}\\
+\text{Secondary Ash Fraction: 8.63%}\\
+```
+
+
 ## Problem 1.2
 ```julia
 using JuMP
@@ -56,7 +63,7 @@ F = 1:length(facilities);
 @variable(waste_model, Y[f in F], Bin);
 ```
 ```math
-\text{Objective Variables:}\\
+\text{Decision Variables:}\\
 W_s,f = \text{waste sent from each city, s, to each facility, f}\\
 R_g,f = \text{residual waste sent from each facility, g, to other facilities, f}\\
 Y_f   = \text{binary indicating whether or not each facility, f, is running}\\
@@ -82,13 +89,20 @@ rr = [sum(R[:,1]); sum(R[:,2]); sum(R[:,3])];
 # each facility has a capacity limit
 @constraint(waste_model, cap[f in F], sum(W[:,f]) + sum(R[:,f]) <= capacity[f]);
 # residual waste balance
+# no waste leaves the landfill
 @constraint(waste_model, resid1, sum(R[1,:]) == 0);
+# the waste that leaves the recycling facility is equal to the residual
 @constraint(waste_model, resid2, sum(R[2,:]) == (1-fracs[2])*sum(W[:,2]));
+# the waste that leaves the w2e facility is equal to the initial and secondary ash percent
 @constraint(waste_model, resid3, sum(R[3,:]) == fracs[3]*sum(W[:,3]) + secondary_ash*sum(R[:,3]));
+# no waste is redirected to the same facility it leaves
 @constraint(waste_model, noresiddiag, sum(R[f, f] for f in F) == 0)
+# waste cannot go from the w2e to recycling
 @constraint(waste_model, noresid, R[3,2] == 0)
 # if a facility is not operating there should be no waste sent to it
+# landfill must always be operating
 @constraint(waste_model, commit1,  Y[1] == 1);
+# other facilities operating if the total waste in is 0
 @constraint(waste_model, commit2, !Y[2] => {sum(W[:,2]) == 0});
 @constraint(waste_model, commit3, !Y[3] => {sum(W[:,3]) + sum(R[:,3]) == 0});
 
@@ -108,11 +122,15 @@ value.(W)
 ```julia; term=true
 value.(R)
 ```
-```julia; reterm=true
+```julia; term=true
 value.(Y)
 ```
 
 ## Problem 1.6
+The recycling facility will not be used. All of the waste from city 2 will be sent to the landfill.
+83.75 Mg/day of waste from city 1 will be sent to the waste2energy facility, and the rest will
+be sent to the landfill. The ash that remains from the w2e facility, 13.74 Mg/day, will be sent to 
+the landfill. This will cost 28,886.36 USD per day.
 ![img](prob_1.png)
 
 # Problem 2
@@ -135,7 +153,6 @@ tipping_fee_new = [50, 7, 75];
 optimize!(waste_model)
 objective_value(waste_model)
 ```
-
 ```julia; term=true
 value.(W)
 ```
@@ -149,6 +166,11 @@ value.(Y)
 ```
 
 ## Problem 2.3
+The Waste2Energy plant is no longer in use due to the increased price from the carbon tax. Instead,
+the recycling facility now is. All of the waste from city 1 is sent to the recycling facility. 
+85.43 Mg/day of waste from city 2 is sent to the recycling facility, and the rest of the 170 Mg/day 
+is sent directly to the landfill. 115.43 Mg/day of residual waste is sent from the 
+recycling facility to the landfill. This would cost $33,126.95 per day.
 ![img](prob_2.png)
 
 # References
